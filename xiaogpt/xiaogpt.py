@@ -25,6 +25,7 @@ from xiaogpt.config import (
 )
 from xiaogpt.tts import TTS, MiTTS, TetosTTS
 from xiaogpt.utils import detect_language, parse_cookie_string
+from xiaogpt.xiaoai_websocket_server import XiaoAiWebSocketServer
 
 EOF = object()
 
@@ -49,6 +50,7 @@ class MiGPT:
         self.log.addHandler(RichHandler())
         self.log.debug(config)
         self.mi_session = ClientSession()
+        self.websocket = XiaoAiWebSocketServer()
 
     async def close(self):
         await self.mi_session.close()
@@ -67,9 +69,9 @@ class MiGPT:
                 )
                 await self.polling_event.wait()
                 if (
-                    self.config.mute_xiaoai
-                    and new_record
-                    and self.need_ask_gpt(new_record)
+                        self.config.mute_xiaoai
+                        and new_record
+                        and self.need_ask_gpt(new_record)
                 ):
                     await self.stop_if_xiaoai_is_playing()
                 if (d := time.perf_counter() - start) < 1:
@@ -177,9 +179,9 @@ class MiGPT:
             return False
         query = record.get("query", "")
         return (
-            self.in_conversation
-            and not query.startswith(WAKEUP_KEYWORD)
-            or query.lower().startswith(tuple(w.lower() for w in self.config.keyword))
+                self.in_conversation
+                and not query.startswith(WAKEUP_KEYWORD)
+                or query.lower().startswith(tuple(w.lower() for w in self.config.keyword))
         )
 
     def need_change_prompt(self, record):
@@ -288,7 +290,7 @@ class MiGPT:
 
         async def collect_stream(queue):
             async for message in self.chatbot.ask_stream(
-                query, **self.config.gpt_options
+                    query, **self.config.gpt_options
             ):
                 await queue.put(message)
 
@@ -322,8 +324,8 @@ class MiGPT:
         playing_info = await self.mina_service.player_get_status(self.device_id)
         # WTF xiaomi api
         is_playing = (
-            json.loads(playing_info.get("data", {}).get("info", "{}")).get("status", -1)
-            == 1
+                json.loads(playing_info.get("data", {}).get("info", "{}")).get("status", -1)
+                == 1
         )
         return is_playing
 
@@ -343,7 +345,9 @@ class MiGPT:
     async def run_forever(self):
         await self.init_all_data()
         task = asyncio.create_task(self.poll_latest_ask())
+        server = asyncio.create_task(self.websocket.run())
         assert task is not None  # to keep the reference to task, do not remove this
+        assert server is not None
         print(
             f"Running xiaogpt now, 用[green]{'/'.join(self.config.keyword)}[/]开头来提问"
         )
@@ -351,6 +355,11 @@ class MiGPT:
         while True:
             self.polling_event.set()
             new_record = await self.last_record.get()
+            isProcess = await self.websocket.process_message(new_record, self.need_ask_gpt(new_record)
+                                                             , self.config.mute_xiaoai, self.do_tts,
+                                                             self.stop_if_xiaoai_is_playing)
+            if isProcess:
+                continue
             self.polling_event.clear()  # stop polling when processing the question
             query = new_record.get("query", "").strip()
             if query == self.config.start_conversation:
