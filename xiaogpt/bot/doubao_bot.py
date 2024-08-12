@@ -37,7 +37,7 @@ class DoubaoBot(ChatHistoryMixin, BaseBot):
 
     async def ask(self, query, **options):
         data = self._get_data(query, **options)
-        async with httpx.AsyncClient(base_url=self.API_URL, auth=self.auth) as client:
+        async with httpx.AsyncClient(base_url=self.API_URL,  verify=False, auth=self.auth) as client:
             resp = await client.post("/api/v1/chat", json=data)
             resp.raise_for_status()
             try:
@@ -69,7 +69,7 @@ class DoubaoBot(ChatHistoryMixin, BaseBot):
             print()
             self.add_message(query, message)
 
-        async with httpx.AsyncClient(base_url=self.API_URL, auth=self.auth) as client:
+        async with httpx.AsyncClient(base_url=self.API_URL,  verify=False, auth=self.auth) as client:
             async with client.stream("POST", "/api/v1/chat", json=data) as resp:
                 resp.raise_for_status()
                 async for sentence in split_sentences(sse_gen(resp.aiter_lines())):

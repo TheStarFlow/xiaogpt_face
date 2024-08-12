@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from typing import AsyncIterator
 
+import aiohttp
 from aiohttp import ClientSession, ClientTimeout
 from miservice import MiAccount, MiIOService, MiNAService, miio_command
 from rich import print
@@ -49,14 +50,14 @@ class MiGPT:
         self.log.setLevel(logging.DEBUG if config.verbose else logging.INFO)
         self.log.addHandler(RichHandler())
         self.log.debug(config)
-        self.mi_session = ClientSession()
+        self.mi_session = ClientSession(connector=aiohttp.TCPConnector(ssl=False), trust_env=True)
         self.websocket = XiaoAiWebSocketServer()
 
     async def close(self):
         await self.mi_session.close()
 
     async def poll_latest_ask(self):
-        async with ClientSession() as session:
+        async with ClientSession(connector=aiohttp.TCPConnector(ssl=False), trust_env=True) as session:
             session._cookie_jar = self.cookie_jar
             while True:
                 self.log.debug(
