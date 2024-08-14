@@ -36,6 +36,8 @@ class XiaoAiWebSocketServer:
 
     async def handler(self, websocket, path):
         # 新客户端连接
+        client_ip, client_port = websocket.remote_address
+        print(f"来自 websocket client {client_ip}:{client_port}的连接")
         self.clients.add(websocket)
         try:
             async for message in websocket:
@@ -56,14 +58,14 @@ class XiaoAiWebSocketServer:
             self.clients.remove(websocket)
 
     async def start_server(self):
-        self.server = await websockets.serve(self.handler, self.host, self.port)
         print(f"WebSocket 服务器启动在 ws://{self.host}:{self.port}")
+        self.server = await websockets.serve(self.handler, self.host, self.port)
 
     async def stop_server(self):
         if self.server:
+            print("WebSocket 服务器关闭")
             self.server.close()
             await self.server.wait_closed()
-            print("WebSocket 服务器已关闭")
 
     async def broadcast(self, message, is_ping=False):
         if not is_ping:
