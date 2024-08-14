@@ -5,6 +5,8 @@ import time
 import websockets
 import socket
 import logging
+from rich import print
+
 
 from xiaogpt.config import WAKEUP_KEYWORD
 
@@ -74,7 +76,7 @@ class XiaoAiWebSocketServer:
     async def process_message(self, message, need_ask, mute, tts_callback, stop_callback) -> bool:
         # is wake up word
         query = message.get("query", "").strip()
-        print("curr process message :" + query)
+        print("最新对话 :" + query)
         if query.startswith(WAKEUP_KEYWORD):
             data = {
                 "target": "face",
@@ -89,6 +91,7 @@ class XiaoAiWebSocketServer:
                 "target": "qrcode",
                 "content": ""
             }
+            print("打开二维码连接功能")
             await asyncio.create_task(self.broadcast(json.dumps(data)))
             await tts_callback("二维码已打开，快扫码连接吧")
             return True
