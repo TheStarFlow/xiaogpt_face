@@ -7,7 +7,7 @@ from xiaogpt.config import WAKEUP_KEYWORD
 
 
 class XiaoAiWebSocketServer:
-    def __init__(self, host='localhost', port=8765):
+    def __init__(self, host='localhost', port=8888):
         self.host = host
         self.port = port
         self.clients = set()
@@ -36,6 +36,7 @@ class XiaoAiWebSocketServer:
             print("WebSocket 服务器已关闭")
 
     async def broadcast(self, message):
+        print("broadcast message :" + message)
         if self.clients:  # 确保有连接的客户端
             await asyncio.gather(
                 *[client.send(message) for client in self.clients]
@@ -44,6 +45,7 @@ class XiaoAiWebSocketServer:
     async def process_message(self, message, need_ask, mute, tts_callback, stop_callback) -> bool:
         # is wake up word
         query = message.get("query", "").strip()
+        print("curr process message :" + query)
         if query.startwith(WAKEUP_KEYWORD):
             data = {
                 "target": "face",

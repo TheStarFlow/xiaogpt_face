@@ -356,11 +356,14 @@ class MiGPT:
         while True:
             self.polling_event.set()
             new_record = await self.last_record.get()
-            isProcess = await self.websocket.process_message(new_record, self.need_ask_gpt(new_record)
-                                                             , self.config.mute_xiaoai, self.do_tts,
-                                                             self.stop_if_xiaoai_is_playing)
-            if isProcess:
-                continue
+            try:
+                isProcess = await self.websocket.process_message(new_record, self.need_ask_gpt(new_record)
+                                                                 , self.config.mute_xiaoai, self.do_tts,
+                                                                 self.stop_if_xiaoai_is_playing)
+                if isProcess:
+                    continue
+            except Exception as e:
+                print("websocket error " + e.__str__())
             self.polling_event.clear()  # stop polling when processing the question
             query = new_record.get("query", "").strip()
             if query == self.config.start_conversation:
