@@ -1,17 +1,36 @@
 import asyncio
 import json
+import time
 
 import websockets
+import socket
+import logging
 
 from xiaogpt.config import WAKEUP_KEYWORD
 
 
+def get_host_ip():
+    """
+    查询本机ip地址
+    :return: ip
+    """
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+
+    return ip
+
+
 class XiaoAiWebSocketServer:
-    def __init__(self, host='localhost', port=8888):
+    def __init__(self, host=get_host_ip(), port=8888):
         self.host = host
         self.port = port
         self.clients = set()
         self.server = None
+        self.log = logging.getLogger("xiaogpt")
 
     async def handler(self, websocket, path):
         # 新客户端连接
@@ -19,8 +38,17 @@ class XiaoAiWebSocketServer:
         try:
             async for message in websocket:
                 # 处理接收到的消息
-                print(f"收到消息: {message}")
+                self.log.debug(f"收到消息: {message}")
                 # 这里可以添加其他消息处理逻辑
+                try:
+                    message = json.loads(message)
+                    if message["target"] == "ping":
+                        echo = dict()
+                        echo["target"] = "echo"
+                        echo["content"] = time.time() * 1000
+                        await self.broadcast(json.dumps(echo), True)
+                except Exception as e:
+                    print("error message " + str(e))
         finally:
             # 客户端断开连接
             self.clients.remove(websocket)
@@ -35,8 +63,9 @@ class XiaoAiWebSocketServer:
             await self.server.wait_closed()
             print("WebSocket 服务器已关闭")
 
-    async def broadcast(self, message):
-        print("broadcast message :" + message)
+    async def broadcast(self, message, is_ping=False):
+        if not is_ping:
+            print("broadcast message :" + message)
         if self.clients:  # 确保有连接的客户端
             await asyncio.gather(
                 *[client.send(message) for client in self.clients]
@@ -46,7 +75,7 @@ class XiaoAiWebSocketServer:
         # is wake up word
         query = message.get("query", "").strip()
         print("curr process message :" + query)
-        if query.startwith(WAKEUP_KEYWORD):
+        if query.startswith(WAKEUP_KEYWORD):
             data = {
                 "target": "face",
                 "content": ""
