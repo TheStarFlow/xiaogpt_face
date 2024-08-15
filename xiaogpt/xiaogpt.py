@@ -69,18 +69,18 @@ class MiGPT:
                     "Polling_event, timestamp: %s %s", self.last_timestamp, new_record
                 )
                 await self.polling_event.wait()
+                try:
+                    await self.websocket.process_message(new_record,
+                                                         self.config.mute_xiaoai, self.do_tts,
+                                                         self.stop_if_xiaoai_is_playing)
+                except Exception as e:
+                    print("websocket handle message error " + str(e))
                 if (
                         self.config.mute_xiaoai
                         and new_record
                         and self.need_ask_gpt(new_record)
                 ):
                     await self.stop_if_xiaoai_is_playing()
-                    try:
-                        await self.websocket.process_message(new_record,
-                                                             self.config.mute_xiaoai, self.do_tts,
-                                                             self.stop_if_xiaoai_is_playing)
-                    except Exception as e:
-                        print("websocket handle message error " + str(e))
                 if (d := time.perf_counter() - start) < 1:
                     # sleep to avoid too many request
                     self.log.debug("Sleep %f, timestamp: %s", d, self.last_timestamp)
