@@ -77,6 +77,8 @@ class XiaoAiWebSocketServer:
 
     async def process_message(self, message, mute, tts_callback, stop_callback) -> bool:
         # is wake up word
+        if not message:
+            return False
         query = message.get("query", "").strip()
         print("最新对话 :" + query)
         if query.startswith(WAKEUP_KEYWORD):
