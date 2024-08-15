@@ -75,6 +75,12 @@ class MiGPT:
                         and self.need_ask_gpt(new_record)
                 ):
                     await self.stop_if_xiaoai_is_playing()
+                    try:
+                        await self.websocket.process_message(new_record,
+                                                             self.config.mute_xiaoai, self.do_tts,
+                                                             self.stop_if_xiaoai_is_playing)
+                    except Exception as e:
+                        print("websocket handle message error " + str(e))
                 if (d := time.perf_counter() - start) < 1:
                     # sleep to avoid too many request
                     self.log.debug("Sleep %f, timestamp: %s", d, self.last_timestamp)
@@ -345,8 +351,8 @@ class MiGPT:
 
     async def run_forever(self):
         await self.init_all_data()
-        task = asyncio.create_task(self.poll_latest_ask())
         server = asyncio.create_task(self.websocket.run())
+        task = asyncio.create_task(self.poll_latest_ask())
         assert task is not None  # to keep the reference to task, do not remove this
         assert server is not None
         print(
@@ -356,14 +362,6 @@ class MiGPT:
         while True:
             self.polling_event.set()
             new_record = await self.last_record.get()
-            try:
-                isProcess = await self.websocket.process_message(new_record, self.need_ask_gpt(new_record)
-                                                                 , self.config.mute_xiaoai, self.do_tts,
-                                                                 self.stop_if_xiaoai_is_playing)
-                if isProcess:
-                    continue
-            except Exception as e:
-                print("websocket error " + e.__str__())
             self.polling_event.clear()  # stop polling when processing the question
             query = new_record.get("query", "").strip()
             if query == self.config.start_conversation:

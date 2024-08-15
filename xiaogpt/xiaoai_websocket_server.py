@@ -75,7 +75,7 @@ class XiaoAiWebSocketServer:
                 *[client.send(message) for client in self.clients]
             )
 
-    async def process_message(self, message, need_ask, mute, tts_callback, stop_callback) -> bool:
+    async def process_message(self, message, mute, tts_callback, stop_callback) -> bool:
         # is wake up word
         query = message.get("query", "").strip()
         print("最新对话 :" + query)
@@ -88,18 +88,16 @@ class XiaoAiWebSocketServer:
             return True
         if "连" in query and "WIFI" in query:
             if mute:
-                await stop_callback
+                stop_callback()
             data = {
                 "target": "qrcode",
                 "content": ""
             }
             print("打开二维码连接功能")
             await asyncio.create_task(self.broadcast(json.dumps(data)))
-            await tts_callback("二维码已打开，快扫码连接吧")
+            tts_callback("二维码已打开，快扫码连接吧")
             return True
         return False
-        # if message.startswith("XIAOAI"):
-        #     asyncio.create_task(self.broadcast("你好，我是服务器。"))
 
     async def run(self):
         await self.start_server()
