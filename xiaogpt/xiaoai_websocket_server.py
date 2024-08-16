@@ -90,14 +90,14 @@ class XiaoAiWebSocketServer:
             return True
         if "连" in query and "WIFI" in query:
             if mute:
-                stop_callback()
+                await stop_callback()
             data = {
                 "target": "qrcode",
                 "content": ""
             }
             print("打开二维码连接功能")
             await asyncio.create_task(self.broadcast(json.dumps(data)))
-            tts_callback("二维码已打开，快扫码连接吧")
+            await tts_callback("二维码已打开，快扫码连接吧")
             return True
         return False
 
