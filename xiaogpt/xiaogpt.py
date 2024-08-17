@@ -51,7 +51,7 @@ class MiGPT:
         self.log.addHandler(RichHandler())
         self.log.debug(config)
         self.mi_session = ClientSession(connector=aiohttp.TCPConnector(ssl=False), trust_env=True)
-        self.websocket = XiaoAiWebSocketServer()
+        self.websocket = XiaoAiWebSocketServer(self.do_tts)
 
     async def close(self):
         await self.mi_session.close()
@@ -404,7 +404,9 @@ class MiGPT:
             else:
                 # waiting for xiaoai speaker done
                 await asyncio.sleep(8)
+            await self.websocket.send_face_msg()
             await self.do_tts(f"正在问{self.chatbot.name}请耐心等待")
+            await self.websocket.process_message("小爱同学", self.config.mute_xiaoai, self.do_tts, self.stop_if_xiaoai_is_playing)
             try:
                 print(
                     "以下是小爱的回答: ",

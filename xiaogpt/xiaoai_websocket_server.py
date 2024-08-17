@@ -27,12 +27,13 @@ def get_host_ip():
 
 
 class XiaoAiWebSocketServer:
-    def __init__(self, host=get_host_ip(), port=8888):
+    def __init__(self, do_tts,host=get_host_ip(), port=8888):
         self.host = host
         self.port = port
         self.clients = set()
         self.server = None
         self.log = logging.getLogger("xiaogpt")
+        self.tts = do_tts
 
     async def handler(self, websocket, path):
         # 新客户端连接
@@ -44,18 +45,27 @@ class XiaoAiWebSocketServer:
                 # 处理接收到的消息
                 self.log.debug(f"收到消息: {message}")
                 # 这里可以添加其他消息处理逻辑
-                try:
-                    message = json.loads(message)
-                    if message["target"] == "ping":
-                        echo = dict()
-                        echo["target"] = "echo"
-                        echo["content"] = time.time() * 1000
-                        await self.broadcast(json.dumps(echo), True)
-                except Exception as e:
-                    print("error message " + str(e))
+                await self.process_my_msg(message)
+
         finally:
             # 客户端断开连接
             self.clients.remove(websocket)
+
+    async def process_my_msg(self,message):
+        try:
+            message = json.loads(message)
+            if message["target"] == "ping":
+                echo = dict()
+                echo["target"] = "echo"
+                echo["content"] = time.time() * 1000
+                await self.broadcast(json.dumps(echo), True)
+            elif message["target"] == "person":
+                echo = dict()
+                echo["target"] = "echo"
+                echo["content"] = "ok"
+                await self.broadcast(json.dumps(echo), False)
+        except Exception as e:
+            print("error message " + str(e))
 
     async def start_server(self):
         print(f"WebSocket 服务器启动在 ws://{self.host}:{self.port}")
@@ -81,13 +91,6 @@ class XiaoAiWebSocketServer:
             return False
         query = message.get("query", "").strip()
         print("最新对话 :" + query)
-        if query.startswith(WAKEUP_KEYWORD):
-            data = {
-                "target": "face",
-                "content": ""
-            }
-            await asyncio.create_task(self.broadcast(json.dumps(data)))
-            return True
         if "连" in query and "WIFI" in query:
             if mute:
                 await stop_callback()
@@ -100,6 +103,14 @@ class XiaoAiWebSocketServer:
             await tts_callback("二维码已打开，快扫码连接吧")
             return True
         return False
+
+
+    async def send_face_msg(self):
+        data = {
+            "target": "face",
+            "content": ""
+        }
+        await asyncio.create_task(self.broadcast(json.dumps(data)))
 
     async def run(self):
         await self.start_server()
