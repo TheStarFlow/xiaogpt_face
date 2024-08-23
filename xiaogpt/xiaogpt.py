@@ -406,7 +406,7 @@ class MiGPT:
                 await asyncio.sleep(8)
             await self.websocket.send_face_msg()
             await self.do_tts(f"正在问{self.chatbot.name}请耐心等待")
-            await self.websocket.process_message("小爱同学", self.config.mute_xiaoai, self.do_tts, self.stop_if_xiaoai_is_playing)
+            await self.websocket.process_message({"query":"小爱同学"}, self.config.mute_xiaoai, self.do_tts, self.stop_if_xiaoai_is_playing)
             try:
                 print(
                     "以下是小爱的回答: ",
